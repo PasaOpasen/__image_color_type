@@ -9,8 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-
 from pdf2image import convert_from_path
+
+import cv2
 
 def numpy_from_pdf(path_to_pdf: str, DPI: int = 150):
     images = convert_from_path(path_to_pdf, dpi = DPI)
@@ -24,6 +25,8 @@ def plot_image_hist(img_rgb: np.ndarray, dir_path: str):
     :param path:
     :return:
     """
+    to_folder = lambda s: os.path.join(dir_path, s)
+
     for log in (False, True):
 
         fig = plt.figure(figsize=(10, 8))
@@ -44,8 +47,13 @@ def plot_image_hist(img_rgb: np.ndarray, dir_path: str):
             sub.hist(arr.ravel(), bins = 255, color = color, histtype = 'stepfilled', log = log)
 
         fig.suptitle(f'log={log}', fontsize=16)
-        plt.savefig(os.path.join(dir_path, f"hist_log={log}.png"), dpi = 200)
+        plt.savefig(to_folder(f"hist_log={log}.png"), dpi = 200)
         plt.close()
+
+
+    is_not_gray = (img_rgb.max(axis = 2) - img_rgb.min(axis = 2)) > 25
+
+    Image.fromarray(cv2.bitwise_and(img_rgb, img_rgb, mask = is_not_gray.astype(np.uint8))).convert('RGB').save(to_folder("not_gray.jpg"))
 
 
 
