@@ -27,24 +27,32 @@ def plot_image_hist(img_rgb: np.ndarray, dir_path: str):
     """
     to_folder = lambda s: os.path.join(dir_path, s)
 
+    avg_gray = img_rgb[:,:,0]/3 + img_rgb[:,:,1]/3 + img_rgb[:,:,2]/3
+    lum_gray = img_rgb[:,:,0]*0.2125 + img_rgb[:,:,1]*0.7174 + img_rgb[:,:,2]*0.0721
+
     for log in (False, True):
 
-        fig = plt.figure(figsize=(10, 8))
+        fig = plt.figure(figsize=(9, 12))
+        #fig.tight_layout()
 
-        grid = plt.GridSpec(5, 6, hspace=0.4, wspace=0.4)
+        grid = plt.GridSpec(7, 6, hspace = 0.7, wspace=0.6)
         subs = (
             fig.add_subplot(grid[:2, :],  yticklabels=[]),
-            fig.add_subplot(grid[2:, :2], yticklabels=[]),
-            fig.add_subplot(grid[2:, 2:4], yticklabels=[]),
-            fig.add_subplot(grid[2:, 4:], yticklabels=[]),
+            fig.add_subplot(grid[2:4, :], yticklabels=[]),
+            fig.add_subplot(grid[4:, :2], yticklabels=[]),
+            fig.add_subplot(grid[4:, 2:4], yticklabels=[]),
+            fig.add_subplot(grid[4:, 4:], yticklabels=[]),
         )
 
         for sub, arr, color in zip(
             subs,
-            (img_rgb[:,:,0]/3 + img_rgb[:,:,1]/3 + img_rgb[:,:,2]/3, img_rgb[:,:,0], img_rgb[:,:,1], img_rgb[:,:,2]),
-            ('gray', 'red', 'green', 'blue')
+            (avg_gray, lum_gray, img_rgb[:,:,0], img_rgb[:,:,1], img_rgb[:,:,2]),
+            ('gray', 'gray', 'red', 'green', 'blue')
         ):
             sub.hist(arr.ravel(), bins = 255, color = color, histtype = 'stepfilled', log = log)
+
+        subs[0].set_title('avg gray')
+        subs[1].set_title('709 gray')
 
         fig.suptitle(f'log={log}', fontsize=16)
         plt.savefig(to_folder(f"hist_log={log}.png"), dpi = 200)
