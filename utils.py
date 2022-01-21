@@ -18,7 +18,47 @@ def numpy_from_pdf(path_to_pdf: str, DPI: int = 150):
     return [np.asarray(img.convert('RGB')) for img in images]
 
 
-def plot_image_hist(img_rgb: np.ndarray, dir_path: str):
+def convolve_hist(hist: np.ndarray, size: int = 16):
+
+    c = np.empty(2*size-1)
+    for i in range(size - 1):
+        c[i] = i + 1
+        c[-i-1] = i+1
+    c[size - 1] = size
+
+    return np.convolve(hist, c, mode = 'valid')
+
+def plot_hist_convolved(img_gray: np.ndarray, dir_path: str):
+    fig = plt.figure(figsize=(15, 12))
+    # fig.tight_layout()
+
+    grid = plt.GridSpec(4, 6, hspace=0.7, wspace=0.6)
+    subs = (
+        fig.add_subplot(grid[:2, :3], yticklabels=[]),
+        fig.add_subplot(grid[:2, 3:], yticklabels=[]),
+        fig.add_subplot(grid[2:4, :3], yticklabels=[]),
+        fig.add_subplot(grid[2:4, 3:], yticklabels=[])
+    )
+
+    a, _ = np.histogram(img_gray.ravel(), bins = 255)
+    s = 16
+    conv = convolve_hist(a, s)
+
+    for sub, arr, title, color in zip(
+            subs,
+            (a, conv, np.log10(a + 1), np.log10(conv + 1)),
+            ('base hist', 'convolved log=False', 'base hist log=True', 'log=True'),
+            ('blue', 'green', 'red', 'black')
+    ):
+        sub.plot(arr, color=color)
+        sub.set_title(title)
+
+    plt.savefig(os.path.join(dir_path, f"conv size {s}.png"), dpi=200)
+    plt.close()
+
+
+
+def plot_image_hist(img_rgb: np.ndarray, dir_path: str, plot_color_part: bool = False):
     """
     plots histogram for gray and r/g/b components of image
     :param img_rgb:
@@ -30,38 +70,44 @@ def plot_image_hist(img_rgb: np.ndarray, dir_path: str):
     avg_gray = img_rgb[:,:,0]/3 + img_rgb[:,:,1]/3 + img_rgb[:,:,2]/3
     lum_gray = img_rgb[:,:,0]*0.2125 + img_rgb[:,:,1]*0.7174 + img_rgb[:,:,2]*0.0721
 
-    for log in (False, True):
+    if plot_color_part:
 
-        fig = plt.figure(figsize=(9, 12))
-        #fig.tight_layout()
+        for log in (False, True):
 
-        grid = plt.GridSpec(7, 6, hspace = 0.7, wspace=0.6)
-        subs = (
-            fig.add_subplot(grid[:2, :],  yticklabels=[]),
-            fig.add_subplot(grid[2:4, :], yticklabels=[]),
-            fig.add_subplot(grid[4:, :2], yticklabels=[]),
-            fig.add_subplot(grid[4:, 2:4], yticklabels=[]),
-            fig.add_subplot(grid[4:, 4:], yticklabels=[]),
-        )
+            fig = plt.figure(figsize=(9, 12))
+            #fig.tight_layout()
 
-        for sub, arr, color in zip(
-            subs,
-            (avg_gray, lum_gray, img_rgb[:,:,0], img_rgb[:,:,1], img_rgb[:,:,2]),
-            ('gray', 'gray', 'red', 'green', 'blue')
-        ):
-            sub.hist(arr.ravel(), bins = 255, color = color, histtype = 'stepfilled', log = log)
+            grid = plt.GridSpec(7, 6, hspace = 0.7, wspace=0.6)
+            subs = (
+                fig.add_subplot(grid[:2, :],  yticklabels=[]),
+                fig.add_subplot(grid[2:4, :], yticklabels=[]),
+                fig.add_subplot(grid[4:, :2], yticklabels=[]),
+                fig.add_subplot(grid[4:, 2:4], yticklabels=[]),
+                fig.add_subplot(grid[4:, 4:], yticklabels=[]),
+            )
 
-        subs[0].set_title('avg gray')
-        subs[1].set_title('709 gray')
+            for sub, arr, color in zip(
+                subs,
+                (avg_gray, lum_gray, img_rgb[:,:,0], img_rgb[:,:,1], img_rgb[:,:,2]),
+                ('gray', 'gray', 'red', 'green', 'blue')
+            ):
+                sub.hist(arr.ravel(), bins = 255, color = color, histtype = 'stepfilled', log = log)
 
-        fig.suptitle(f'log={log}', fontsize=16)
-        plt.savefig(to_folder(f"hist_log={log}.png"), dpi = 200)
-        plt.close()
+            subs[0].set_title('avg gray')
+            subs[1].set_title('709 gray')
+
+            fig.suptitle(f'log={log}', fontsize=16)
+            plt.savefig(to_folder(f"hist_log={log}.png"), dpi = 200)
+            plt.close()
 
 
-    is_not_gray = (img_rgb.max(axis = 2) - img_rgb.min(axis = 2)) > 25
+        is_not_gray = (img_rgb.max(axis = 2) - img_rgb.min(axis = 2)) > 25
 
-    Image.fromarray(cv2.bitwise_and(img_rgb, img_rgb, mask = is_not_gray.astype(np.uint8))).convert('RGB').save(to_folder("not_gray.jpg"))
+        Image.fromarray(cv2.bitwise_and(img_rgb, img_rgb, mask = is_not_gray.astype(np.uint8))).convert('RGB').save(to_folder("not_gray.jpg"))
+
+
+    plot_hist_convolved(lum_gray, dir_path)
+
 
 
 
